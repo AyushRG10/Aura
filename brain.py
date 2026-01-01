@@ -1,4 +1,5 @@
 import ollama
+from senses import SensoryCortex
 
 class Brain:
 
@@ -39,14 +40,21 @@ class Brain:
         
 if __name__ == "__main__":
 
+    from senses import SensoryCortex
+
     aura = Brain()
-    print("Aura Brain initialized. Type 'exit' to stop.")
+    senses = SensoryCortex()
+
+    senses.speak("Aura is online and listening.")
 
     while True:
-        user_text = input("You: ")
-        if (user_text.lower() in ["exit", "quit"]):
-            print("Exiting Aura Brain. Goodbye!")
+        user_text = senses.listen()
+
+        if (user_text):
+            if 'exit' in user_text.lower() or 'quit' in user_text.lower():
+                senses.speak("Shutting down.")
             break
 
         response = aura.think(user_text)
-        print(f"Aura: {response}")
+
+        senses.speak(response)
