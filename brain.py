@@ -10,6 +10,12 @@ except ImportError:
     print("Please make sure the file is named 'senses.py' and is in the same folder.")
     sys.exit(1)
 
+try:
+    import media_control
+except ImportError:
+    print("Warning: 'media_control.py' not found. Media control will be unavailable.")
+    media_control = None
+
 class NeuralCortex:
     def __init__(self):
         self.host = "http://localhost:11434"
@@ -38,7 +44,12 @@ class NeuralCortex:
         system_instruction = (
             "You are Aura. Do NOT use emojis. "
             "Be extremely concise and quick. "
-            "Only provide details if explicitly asked."
+            "Only provide details if explicitly asked. "
+            "MEDIA CONTROL: If the user explicitly asks to Play, Pause, Skip, Go Back, or asks 'What is playing?', "
+            "respond ONLY with one of these exact tags: "
+            "[MEDIA_TOGGLE], [MEDIA_NEXT], [MEDIA_PREV], [MEDIA_INFO]. "
+            "Do NOT output any other text with the tag. "
+            "Example: User: 'Pause music' -> Aura: '[MEDIA_TOGGLE]'"
         )
 
         data = {
@@ -116,7 +127,24 @@ if __name__ == "__main__":
                     break
                 
                 reply = brain.think(user_input)
-                senses.speak(reply)
+
+                # --- MEDIA CONTROL HANDLER ---
+                if media_control and ("[MEDIA_" in reply or "{MEDIA_" in reply):
+                    # Normalize reply to handle potential mismatched braces from LLM hallucinations
+                    normalized_reply = reply.replace("{", "[").replace("}", "]")
+                    
+                    if "[MEDIA_TOGGLE]" in normalized_reply or "[MEDIA_PLAY]" in normalized_reply or "[MEDIA_PAUSE]" in normalized_reply:
+                        senses.speak(media_control.play_pause())
+                    elif "[MEDIA_NEXT]" in normalized_reply:
+                        senses.speak(media_control.skip_next())
+                    elif "[MEDIA_PREV]" in normalized_reply or "[MEDIA_BACK]" in normalized_reply:
+                        senses.speak(media_control.skip_previous())
+                    elif "[MEDIA_INFO]" in normalized_reply:
+                        senses.speak(media_control.get_media_info())
+                    else:
+                        senses.speak(reply) # Fallback if tag is unrecognized
+                else:
+                    senses.speak(reply)
                 
                 # --- NEW TIMER STARTED ---
                 # Aura finished talking. We start a FRESH 30-second timer now.
